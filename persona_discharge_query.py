@@ -119,8 +119,8 @@ Now, answer the following question:
                 "success": True,
                 "response": response.choices[0].message.content,
                 "model": model,
-                "tokens_used": response.usage.total_tokens,
-                "finish_reason": response.choices[0].finish_reason
+                "_tokens": response.usage.total_tokens,  # Internal use only, for summary
+             #   "finish_reason": response.choices[0].finish_reason
             }
         except Exception as e:
             return {
@@ -185,6 +185,7 @@ Now, answer the following question:
 
         all_results = []
         query_count = 0
+        total_tokens_used = 0  # Track tokens for summary
 
         for persona_combo in all_persona_combos:
             persona = dict(zip(keys, persona_combo))
@@ -212,6 +213,10 @@ Now, answer the following question:
                     print(f"\n[{query_count}/{total_queries}] {ds_id} | {q_id} | {persona}")
                     result = self.query(prompt, model=model, temperature=temperature)
 
+                    # Track tokens for summary
+                    if result.get('success', True):
+                        total_tokens_used += result.get('_tokens', 0)
+
                     # Add metadata
                     result['persona'] = persona
                     result['discharge_summary_id'] = ds_id
@@ -222,12 +227,19 @@ Now, answer the following question:
                     if result.get('success') is True:
                         result.pop('success', None)
 
+                    # Remove internal token tracking before adding to results
+                    result.pop('_tokens', None)
+
                     all_results.append(result)
 
-                    if result['success']:
+                    if result.get('success', True):
                         print(f"  ✓ {result['response'][:80]}...")
                     else:
                         print(f"  ✗ Error: {result['error']}")
+
+        # Store total tokens in results metadata for save_results
+        if all_results:
+            all_results[0]['_summary_tokens'] = total_tokens_used
 
         return all_results
 
@@ -250,6 +262,7 @@ Now, answer the following question:
         """
         results = []
         total = len(test_cases)
+        total_tokens_used = 0  # Track tokens for summary
 
         print(f"Running {total} specific test cases...")
 
@@ -277,6 +290,10 @@ Now, answer the following question:
             print(f"\n[{i}/{total}] {ds_id} | {q_id} | {persona}")
             result = self.query(prompt, model=model, temperature=temperature)
 
+            # Track tokens for summary
+            if result.get('success', True):
+                total_tokens_used += result.get('_tokens', 0)
+
             # Add metadata
             result['persona'] = persona
             result['discharge_summary_id'] = ds_id
@@ -287,17 +304,27 @@ Now, answer the following question:
             if result.get('success') is True:
                 result.pop('success', None)
 
+            # Remove internal token tracking before adding to results
+            result.pop('_tokens', None)
+
             results.append(result)
 
-            if result['success']:
+            if result.get('success', True):
                 print(f"  ✓ {result['response'][:80]}...")
             else:
                 print(f"  ✗ Error: {result['error']}")
+
+        # Store total tokens in results metadata for save_results
+        if results:
+            results[0]['_summary_tokens'] = total_tokens_used
 
         return results
 
     def save_results(self, results: List[Dict[str, Any]], output_file: str = "results.json"):
         """Save results to JSON file with summary."""
+        # Extract total tokens from metadata before saving
+        total_tokens = results[0].pop('_summary_tokens', 0) if results else 0
+
         with open(output_file, 'w') as f:
             json.dump(results, f, indent=2)
 
@@ -306,8 +333,7 @@ Now, answer the following question:
         print(f"{'='*80}")
         print(f"Results saved to: {output_file}")
 
-        successful = sum(1 for r in results if r['success'])
-        total_tokens = sum(r.get('tokens_used', 0) for r in results if r['success'])
+        successful = sum(1 for r in results if r.get('success', True))
 
         print(f"Successful queries: {successful}/{len(results)}")
         print(f"Total tokens used: {total_tokens}")
