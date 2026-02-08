@@ -23,15 +23,15 @@ class PersonaDischargeQueryEngine:
 
         # Define all questions
         self.questions = {
-            "Q1": "Please rate your understanding level of this discharge instruction.\nA. Very clear\nB. Somewhat clear\nC. Not clear at all",
+            "Q1": "Please rate your understanding level of this discharge instruction.\nA.Very clear\nB. Somewhat clear\nC. Not clear at all",
 
-            "Q2": "Do you know the name of all your medications? (If yes, please type.)\nA. Yes\nB. I don't know\nC. Not provided",
+            "Q2": "Do you know the name of all your medications? \nA.Yes\nB. I don't know\nC. Not provided",
 
-            "Q3": "Do you know your diagnosis? (If yes, please type.)\nA. Yes\nB. I don't know\nC. Not provided",
+            "Q3": "Do you know your diagnosis? \nA.Yes\nB. I don't know\nC. Not provided",
 
-            "Q4": "Do you know the common side effects of all your medications? (If yes, please type.)\nA. Yes\nB. I don't know\nC. Not provided",
+            "Q4": "Do you know the common side effects of all your medications? \nA.Yes\nB. I don't know\nC. Not provided",
 
-            "Q5": "Are there other prescriptions given besides the medication? (If yes, please type.)\nA. Yes\nB. I don't know\nC. Not provided",
+            "Q5": "Are there other prescriptions given besides the medication? \nA. Yes\nB. I don't know\nC. Not provided",
 
             "Q6": "Do you know what kind of condition you have mentioned in the discharge instructions?\nA. Stomach disease\nB. Ulcer in the duodenum\nC. Wearing Tegaderm\nD. Keep splint\nE. I don't know",
 
@@ -68,6 +68,11 @@ Leave splint on until follow-up""",
             "DS4": "Ok to shower today but wear tegaderm dressing over the drain site. No heavy lifting. Return to ED for anything that concerns you."
         }
 
+    def is_reasoning_model(self, model: str) -> bool:
+        """Check if the model is a reasoning model (e.g., o1, o3-mini)."""
+        reasoning_models = ['o1', 'o1-mini', 'o1-preview', 'o3-mini']
+        return any(reasoning_model in model.lower() for reasoning_model in reasoning_models)
+
     def build_persona_prompt(
         self,
         age: str,
@@ -78,6 +83,7 @@ Leave splint on until follow-up""",
         er_visit_frequency: str,
         discharge_summary: str,
         question: str,
+        model: str = "gpt-4",
         reasoning_instruction: str = "Explain with your reasoning, then provide the letter."
     ) -> str:
         """Build the complete prompt with persona and discharge summary."""
@@ -197,6 +203,12 @@ Now, answer the following question:
                     question = self.questions[q_id]
                     query_count += 1
 
+                    # Determine reasoning instruction based on model type
+                    if self.is_reasoning_model(model):
+                        reasoning_instruction = "Explain with your reasoning, then provide the letter."
+                    else:
+                        reasoning_instruction = "Answer with only letter"
+
                     # Build prompt
                     prompt = self.build_persona_prompt(
                         age=persona['age'],
@@ -206,7 +218,9 @@ Now, answer the following question:
                         doctor_visit=persona['doctor_visit'],
                         er_visit_frequency=persona['er_visit_frequency'],
                         discharge_summary=discharge_summary,
-                        question=question
+                        question=question,
+                        model=model,
+                        reasoning_instruction=reasoning_instruction
                     )
 
                     # Query
@@ -274,6 +288,12 @@ Now, answer the following question:
             discharge_summary = self.discharge_summaries[ds_id]
             question = self.questions[q_id]
 
+            # Determine reasoning instruction based on model type
+            if self.is_reasoning_model(model):
+                reasoning_instruction = "Explain with your reasoning, then provide the letter."
+            else:
+                reasoning_instruction = "Answer with only letter"
+
             # Build prompt
             prompt = self.build_persona_prompt(
                 age=persona['age'],
@@ -283,7 +303,9 @@ Now, answer the following question:
                 doctor_visit=persona['doctor_visit'],
                 er_visit_frequency=persona['er_visit_frequency'],
                 discharge_summary=discharge_summary,
-                question=question
+                question=question,
+                model=model,
+                reasoning_instruction=reasoning_instruction
             )
 
             # Query

@@ -11,10 +11,13 @@ pip install -r requirements.txt
 # 2. Set your OpenAI API key
 export OPENAI_API_KEY='your-api-key-here'
 
-# 3. Run a small test (8 queries, ~$0.50)
+# 3. Set running model and temp in test_config.json and experiment_config.json
+current settings: "model": "gpt-4", "temperature": 0.7
+
+# 4. Run a small test (8 queries, ~$0.50)
 python run_experiment.py test_config.json
 
-# 4. Run full experiment (38,400 queries, ~$700)
+# 5. Run full experiment (38,400 queries, ~$700)
 python run_experiment.py experiment_config.json
 ```
 
