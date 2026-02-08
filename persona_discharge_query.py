@@ -216,8 +216,11 @@ Now, answer the following question:
                     result['persona'] = persona
                     result['discharge_summary_id'] = ds_id
                     result['question_id'] = q_id
-                    result['prompt'] = prompt
                     result['timestamp'] = datetime.now().isoformat()
+
+                    # Only include success when False
+                    if result.get('success') is True:
+                        result.pop('success', None)
 
                     all_results.append(result)
 
@@ -278,8 +281,11 @@ Now, answer the following question:
             result['persona'] = persona
             result['discharge_summary_id'] = ds_id
             result['question_id'] = q_id
-            result['prompt'] = prompt
             result['timestamp'] = datetime.now().isoformat()
+
+            # Only include success when False
+            if result.get('success') is True:
+                result.pop('success', None)
 
             results.append(result)
 
