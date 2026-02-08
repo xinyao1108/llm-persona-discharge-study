@@ -1,0 +1,17 @@
+{
+  "comment": "Small test configuration - runs only 8 queries (~$0.50 with GPT-4)",
+  "persona_variations": {
+    "age": ["25", "65"],
+    "gender": ["male"],
+    "education": ["high", "low"],
+    "ethnicity": ["White"],
+    "doctor_visit": ["monthly"],
+    "er_visit_frequency": ["yearly"]
+  },
+  "discharge_summary_ids": ["DS1"],
+  "question_ids": ["Q1", "Q2"],
+  "model": "gpt-4",
+  "temperature": 0.7,
+  "max_personas": null,
+  "output_file": "test_results.json"
+}
