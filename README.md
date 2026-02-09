@@ -12,7 +12,7 @@ pip install -r requirements.txt
 export OPENAI_API_KEY='your-api-key-here'
 
 # 3. Set running model and temp in test_config.json and experiment_config.json
-current settings: "model": "gpt-4", "temperature": 0.7
+update settings: "model": "gpt-4", "temperature": 1.0, "enable_reasoning": true,
 
 # 4. Run a small test (8 queries, ~$0.50)
 python run_experiment.py test_config.json
