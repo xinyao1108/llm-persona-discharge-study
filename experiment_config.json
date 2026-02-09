@@ -9,8 +9,9 @@
   },
   "discharge_summary_ids": ["DS1", "DS2", "DS3", "DS4"],
   "question_ids": ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10"],
-  "model": "gpt-4",
-  "temperature": 0.7,
+  "model": "gpt-4-turbo",
+  "temperature": 1.0,
+  "enable_reasoning": false,
   "max_personas": null,
   "output_file": "full_experiment_results.json"
 }

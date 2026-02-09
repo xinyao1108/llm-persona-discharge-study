@@ -106,7 +106,8 @@ def main():
         question_ids=config['question_ids'],
         model=config['model'],
         temperature=config['temperature'],
-        max_personas=config.get('max_personas')
+        max_personas=config.get('max_personas'),
+        enable_reasoning=config.get('enable_reasoning', False)
     )
 
     # Save results

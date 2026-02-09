@@ -68,11 +68,6 @@ Leave splint on until follow-up""",
             "DS4": "Ok to shower today but wear tegaderm dressing over the drain site. No heavy lifting. Return to ED for anything that concerns you."
         }
 
-    def is_reasoning_model(self, model: str) -> bool:
-        """Check if the model is a reasoning model (e.g., o1, o3-mini)."""
-        reasoning_models = ['o1', 'o1-mini', 'o1-preview', 'o3-mini']
-        return any(reasoning_model in model.lower() for reasoning_model in reasoning_models)
-
     def build_persona_prompt(
         self,
         age: str,
@@ -83,7 +78,7 @@ Leave splint on until follow-up""",
         er_visit_frequency: str,
         discharge_summary: str,
         question: str,
-        model: str = "gpt-4",
+        model: str = "o1-mini",
         reasoning_instruction: str = "Explain with your reasoning, then provide the letter."
     ) -> str:
         """Build the complete prompt with persona and discharge summary."""
@@ -105,9 +100,9 @@ Now, answer the following question:
     def query(
         self,
         prompt: str,
-        model: str = "gpt-4",
-        temperature: float = 0.7,
-        max_tokens: int = 500
+        model: str = "o1-mini",
+        temperature: float = 1,
+        max_completion_tokens: int = 500
     ) -> Dict[str, Any]:
         """Send a single query to ChatGPT."""
         try:
@@ -118,7 +113,7 @@ Now, answer the following question:
                     {"role": "user", "content": prompt}
                 ],
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_completion_tokens=max_completion_tokens
             )
 
             return {
@@ -139,9 +134,10 @@ Now, answer the following question:
         persona_variations: Dict[str, List[str]],
         discharge_summary_ids: List[str] = None,
         question_ids: List[str] = None,
-        model: str = "gpt-4",
-        temperature: float = 0.7,
-        max_personas: Optional[int] = None
+        model: str = "o1-mini",
+        temperature: float = 1,
+        max_personas: Optional[int] = None,
+        enable_reasoning: bool = False
     ) -> List[Dict[str, Any]]:
         """
         Run the full experiment: all persona combinations x all DS x all questions.
@@ -153,6 +149,7 @@ Now, answer the following question:
             model: ChatGPT model to use
             temperature: Sampling temperature
             max_personas: Limit number of persona combinations (for testing)
+            enable_reasoning: Whether to ask model to provide reasoning (default: False)
 
         Returns:
             List of all results
@@ -203,8 +200,8 @@ Now, answer the following question:
                     question = self.questions[q_id]
                     query_count += 1
 
-                    # Determine reasoning instruction based on model type
-                    if self.is_reasoning_model(model):
+                    # Determine reasoning instruction based on enable_reasoning parameter
+                    if enable_reasoning:
                         reasoning_instruction = "Explain with your reasoning, then provide the letter."
                     else:
                         reasoning_instruction = "Answer with only letter"
@@ -260,8 +257,9 @@ Now, answer the following question:
     def run_specific_combinations(
         self,
         test_cases: List[Dict[str, Any]],
-        model: str = "gpt-4",
-        temperature: float = 0.7
+        model: str = "gpt-5-mini",
+        temperature: float = 1,
+        enable_reasoning: bool = False
     ) -> List[Dict[str, Any]]:
         """
         Run specific test combinations.
@@ -270,6 +268,7 @@ Now, answer the following question:
             test_cases: List of dicts with keys: persona, ds_id, question_id
             model: ChatGPT model to use
             temperature: Sampling temperature
+            enable_reasoning: Whether to ask model to provide reasoning (default: False)
 
         Returns:
             List of results
@@ -288,8 +287,8 @@ Now, answer the following question:
             discharge_summary = self.discharge_summaries[ds_id]
             question = self.questions[q_id]
 
-            # Determine reasoning instruction based on model type
-            if self.is_reasoning_model(model):
+            # Determine reasoning instruction based on enable_reasoning parameter
+            if enable_reasoning:
                 reasoning_instruction = "Explain with your reasoning, then provide the letter."
             else:
                 reasoning_instruction = "Answer with only letter"
@@ -392,8 +391,8 @@ def main():
         persona_variations=persona_variations,
         discharge_summary_ids=['DS1'],
         question_ids=['Q1', 'Q2', 'Q3'],
-        model="gpt-4",
-        temperature=0.7,
+        model="o1-mini",
+        temperature=1,
         max_personas=2  # Limit to 2 personas for quick test
     )
 
@@ -433,8 +432,8 @@ def main():
 
     results2 = engine.run_specific_combinations(
         test_cases=test_cases,
-        model="gpt-4",
-        temperature=0.7
+        model="o1-mini",
+        temperature=1.0
     )
 
     engine.save_results(results2, "specific_test_results.json")
