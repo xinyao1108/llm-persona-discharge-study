@@ -45,8 +45,8 @@ Edit [experiment_config.json](experiment_config.json) to customize:
     "gender": ["male", "female"],
     "education": ["high", "low"],
     "ethnicity": ["White", "Black", "Hispanic", "Asian"],
-    "doctor_visit": ["weekly", "monthly", "yearly", "never"],
-    "er_visit_frequency": ["weekly", "monthly", "yearly", "never"]
+    "doctor_visit": ["High", "Low"],
+    "er_visit_frequency": ["High", "Low"]
   }
 }
 ```
@@ -62,8 +62,8 @@ To reduce cost, limit the experiment:
     "gender": ["male", "female"],
     "education": ["high", "low"],
     "ethnicity": ["White"],
-    "doctor_visit": ["monthly", "never"],
-    "er_visit_frequency": ["yearly", "never"]
+    "doctor_visit": ["High", "Low"],
+    "er_visit_frequency": ["High", "Low"]
   },
   "discharge_summary_ids": ["DS1"],
   "question_ids": ["Q1", "Q2", "Q3"],
@@ -121,8 +121,8 @@ Results are saved as JSON:
       "gender": "male",
       "education": "high",
       "ethnicity": "White",
-      "doctor_visit": "monthly",
-      "er_visit_frequency": "never"
+      "doctor_visit": "High",
+      "er_visit_frequency": "Low"
     },
     "discharge_summary_id": "DS1",
     "question_id": "Q1",
@@ -147,8 +147,8 @@ test_cases = [
             'gender': 'female',
             'education': 'low',
             'ethnicity': 'Hispanic',
-            'doctor_visit': 'never',
-            'er_visit_frequency': 'monthly'
+            'doctor_visit': 'Low',
+            'er_visit_frequency': 'High'
         },
         'ds_id': 'DS1',
         'question_id': 'Q1'
@@ -176,8 +176,8 @@ engine.save_results(results, "my_results.json")
     "gender": ["male"],
     "education": ["high", "low"],
     "ethnicity": ["White"],
-    "doctor_visit": ["monthly"],
-    "er_visit_frequency": ["yearly"]
+    "doctor_visit": ["High"],
+    "er_visit_frequency": ["Low"]
   },
   "discharge_summary_ids": ["DS1"],
   "question_ids": ["Q1", "Q10"],

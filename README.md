@@ -1,6 +1,6 @@
 # Persona-Based Discharge Summary Comprehension Study
 
-Query ChatGPT with different persona combinations to test comprehension of medical discharge summaries.
+Query LLMs (OpenAI + Anthropic) with different persona combinations to test comprehension of medical discharge summaries.
 
 ## Quick Start
 
@@ -8,19 +8,20 @@ Query ChatGPT with different persona combinations to test comprehension of medic
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Set your OpenAI API key
-export OPENAI_API_KEY='your-api-key-here'
+# 2. Set your API keys
+export OPENAI_API_KEY='your-openai-key'
+export ANTHROPIC_API_KEY='your-anthropic-key'
 
-# 3. Configure settings in test_config.json and experiment_config.json
-current settings:
-  - "model": "gpt-4-turbo"
-  - "temperature": 1.0
-  - "enable_reasoning": true/false (controls whether model provides reasoning)
+# 3. Configure settings in experiment_config.json
+# Current experiment: 3 models, temperature=1.0, enable_reasoning=true
+#   - GPT-4.1 (10 iterations)
+#   - GPT-5.2 (9 iterations)
+#   - Claude Sonnet 4.5 (9 iterations)
 
-# 4. Run a small test (4 queries)
+# 4. Run a small test
 python run_experiment.py test_config.json
 
-# 5. Run full experiment (38,400 queries)
+# 5. Run full experiment
 python run_experiment.py experiment_config.json
 ```
 
@@ -45,28 +46,67 @@ python run_experiment.py experiment_config.json
 ## Configuration Options
 
 ### Core Settings
-- **model**: LLM model to use (e.g., "gpt-4-turbo", "o1-mini")
+- **models**: List of model configurations, each with:
+  - `model`: Model ID (e.g., "gpt-4.1", "claude-opus-4-6")
+  - `provider`: "openai" or "anthropic"
+  - `iterations`: Number of times to repeat the full experiment
 - **temperature**: Sampling temperature (default: 1.0)
 - **enable_reasoning**: Controls prompt behavior
   - `true`: Ask model to "Explain with your reasoning, then provide the letter"
   - `false`: Ask model to "Answer with only letter"
 - **max_personas**: Limit number of persona combinations (optional)
-- **output_file**: Where to save results
+- **output_dir**: Directory for results (files named `{model}_iter{n}.json`)
+
+## Running the Experiment
+
+Results are saved per model per iteration to the `output_dir`:
+
+```
+results/
+├── gpt-4.1_iter1.json
+├── gpt-4.1_iter2.json
+├── gpt-4.1_iter3.json
+├── gpt-4.1_iter4.json
+├── gpt-4.1_iter5.json
+├── gpt-5.2_iter1.json
+├── gpt-5.2_iter2.json
+├── gpt-5.2_iter3.json
+├── gpt-5.2_iter4.json
+├── claude-sonnet-4-5-20241022_iter1.json
+├── claude-sonnet-4-5-20241022_iter2.json
+├── claude-sonnet-4-5-20241022_iter3.json
+└── claude-sonnet-4-5-20241022_iter4.json
+```
+
+You only need the API key(s) for the providers you want to run. The engine skips models whose provider key is missing.
+
+## Current Experiment Summary
+
+- **192 persona combinations** (3 age × 2 gender × 2 education × 4 ethnicity × 2 doctor_visit × 2 er_visit)
+- **7,680 queries per iteration** (192 personas × 4 DS × 10 Q)
+- **215,040 total queries** across all models and iterations
+
+| Model | Provider | Iterations | Queries |
+|-------|----------|-----------|---------|
+| gpt-4.1 | OpenAI | 10 | 76,800 |
+| gpt-5.2 | OpenAI | 9 | 69,120 |
+| claude-sonnet-4-5 | Anthropic | 9 | 69,120 |
+| **Total** | | **28** | **215,040** |
 
 ## Files
 
-- [persona_discharge_query.py](persona_discharge_query.py) - Main engine
-- [run_experiment.py](run_experiment.py) - Run experiments with cost estimation
-- [test_config.json](test_config.json) - Small test (4 queries, enable_reasoning=true)
-- [experiment_config.json](experiment_config.json) - Full experiment (38,400 queries, enable_reasoning=false)
+- [persona_discharge_query.py](persona_discharge_query.py) - Main engine (supports OpenAI + Anthropic)
+- [run_experiment.py](run_experiment.py) - Run experiments with multi-model/iteration support
+- [test_config.json](test_config.json) - Small test config
+- [experiment_config.json](experiment_config.json) - Full experiment config
 - [PERSONA_README.md](PERSONA_README.md) - Detailed documentation
 
 ## Cost Management
 
-⚠️ The full experiment can be expensive! To reduce cost:
+⚠️ The full experiment (~215,040 queries) can be expensive! To reduce cost:
 
 1. **Use test config first**: `python run_experiment.py test_config.json`
-2. **Use cheaper model**: Set `"model": "gpt-3.5-turbo"` or `"gpt-4o-mini"` in config
+2. **Reduce iterations**: Lower iteration count per model
 3. **Disable reasoning**: Set `"enable_reasoning": false` for shorter responses
 4. **Limit scope**: Select specific DS/Questions in config
 5. **Set max_personas**: Limit persona combinations

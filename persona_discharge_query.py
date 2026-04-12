@@ -8,18 +8,24 @@ import os
 import json
 import itertools
 from openai import OpenAI
+from anthropic import Anthropic
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 
 class PersonaDischargeQueryEngine:
-    def __init__(self, api_key: str = None):
-        """Initialize the engine with OpenAI API key."""
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("OpenAI API key required. Set OPENAI_API_KEY environment variable.")
+    def __init__(self, openai_api_key: str = None, anthropic_api_key: str = None):
+        """Initialize the engine with API keys for OpenAI and/or Anthropic."""
+        self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+        self.anthropic_api_key = anthropic_api_key or os.getenv("ANTHROPIC_API_KEY")
 
-        self.client = OpenAI(api_key=self.api_key)
+        if not self.openai_api_key and not self.anthropic_api_key:
+            raise ValueError(
+                "At least one API key required. Set OPENAI_API_KEY and/or ANTHROPIC_API_KEY."
+            )
+
+        self.openai_client = OpenAI(api_key=self.openai_api_key) if self.openai_api_key else None
+        self.anthropic_client = Anthropic(api_key=self.anthropic_api_key) if self.anthropic_api_key else None
 
         # Define all questions
         self.questions = {
@@ -102,11 +108,26 @@ Now, answer the following question:
         prompt: str,
         model: str = "o1-mini",
         temperature: float = 1,
-        max_completion_tokens: int = 500
+        max_completion_tokens: int = 500,
+        provider: str = "openai"
     ) -> Dict[str, Any]:
-        """Send a single query to ChatGPT."""
+        """Send a single query to the specified provider."""
+        if provider == "anthropic":
+            return self._query_anthropic(prompt, model, temperature, max_completion_tokens)
+        return self._query_openai(prompt, model, temperature, max_completion_tokens)
+
+    def _query_openai(
+        self,
+        prompt: str,
+        model: str,
+        temperature: float,
+        max_completion_tokens: int
+    ) -> Dict[str, Any]:
+        """Send a single query to OpenAI."""
+        if not self.openai_client:
+            return {"success": False, "error": "OpenAI API key not configured"}
         try:
-            response = self.client.chat.completions.create(
+            response = self.openai_client.chat.completions.create(
                 model=model,
                 messages=[
                     {"role": "system", "content": "You are responding as the persona described in the prompt."},
@@ -120,8 +141,41 @@ Now, answer the following question:
                 "success": True,
                 "response": response.choices[0].message.content,
                 "model": model,
-                "_tokens": response.usage.total_tokens,  # Internal use only, for summary
-             #   "finish_reason": response.choices[0].finish_reason
+                "_tokens": response.usage.total_tokens,
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def _query_anthropic(
+        self,
+        prompt: str,
+        model: str,
+        temperature: float,
+        max_completion_tokens: int
+    ) -> Dict[str, Any]:
+        """Send a single query to Anthropic."""
+        if not self.anthropic_client:
+            return {"success": False, "error": "Anthropic API key not configured"}
+        try:
+            response = self.anthropic_client.messages.create(
+                model=model,
+                system="You are responding as the persona described in the prompt.",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=temperature,
+                max_tokens=max_completion_tokens
+            )
+
+            total_tokens = response.usage.input_tokens + response.usage.output_tokens
+            return {
+                "success": True,
+                "response": response.content[0].text,
+                "model": model,
+                "_tokens": total_tokens,
             }
         except Exception as e:
             return {
@@ -137,7 +191,8 @@ Now, answer the following question:
         model: str = "o1-mini",
         temperature: float = 1,
         max_personas: Optional[int] = None,
-        enable_reasoning: bool = False
+        enable_reasoning: bool = False,
+        provider: str = "openai"
     ) -> List[Dict[str, Any]]:
         """
         Run the full experiment: all persona combinations x all DS x all questions.
@@ -222,7 +277,7 @@ Now, answer the following question:
 
                     # Query
                     print(f"\n[{query_count}/{total_queries}] {ds_id} | {q_id} | {persona}")
-                    result = self.query(prompt, model=model, temperature=temperature)
+                    result = self.query(prompt, model=model, temperature=temperature, provider=provider)
 
                     # Track tokens for summary
                     if result.get('success', True):
@@ -259,7 +314,8 @@ Now, answer the following question:
         test_cases: List[Dict[str, Any]],
         model: str = "gpt-5-mini",
         temperature: float = 1,
-        enable_reasoning: bool = False
+        enable_reasoning: bool = False,
+        provider: str = "openai"
     ) -> List[Dict[str, Any]]:
         """
         Run specific test combinations.
@@ -309,7 +365,7 @@ Now, answer the following question:
 
             # Query
             print(f"\n[{i}/{total}] {ds_id} | {q_id} | {persona}")
-            result = self.query(prompt, model=model, temperature=temperature)
+            result = self.query(prompt, model=model, temperature=temperature, provider=provider)
 
             # Track tokens for summary
             if result.get('success', True):
@@ -378,8 +434,8 @@ def main():
         'gender': ['male', 'female'],
         'education': ['high', 'low'],
         'ethnicity': ['White', 'Black'],
-        'doctor_visit': ['monthly', 'never'],
-        'er_visit_frequency': ['yearly', 'never']
+        'doctor_visit': ['High', 'Low'],
+        'er_visit_frequency': ['High', 'Low']
     }
 
     # Example 1: Test one DS with a few questions
@@ -410,8 +466,8 @@ def main():
                 'gender': 'female',
                 'education': 'high',
                 'ethnicity': 'Asian',
-                'doctor_visit': 'monthly',
-                'er_visit_frequency': 'never'
+                'doctor_visit': 'High',
+                'er_visit_frequency': 'Low'
             },
             'ds_id': 'DS1',
             'question_id': 'Q1'
@@ -422,8 +478,8 @@ def main():
                 'gender': 'male',
                 'education': 'low',
                 'ethnicity': 'White',
-                'doctor_visit': 'never',
-                'er_visit_frequency': 'monthly'
+                'doctor_visit': 'Low',
+                'er_visit_frequency': 'High'
             },
             'ds_id': 'DS2',
             'question_id': 'Q10'

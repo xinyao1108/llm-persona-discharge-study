@@ -5,14 +5,14 @@
     "gender": ["male"],
     "education": ["high", "low"],
     "ethnicity": ["White"],
-    "doctor_visit": ["monthly"],
-    "er_visit_frequency": ["yearly"]
+    "doctor_visit": ["High"],
+    "er_visit_frequency": ["Low"]
   },
   "discharge_summary_ids": ["DS1"],
   "question_ids": ["Q1", "Q2"],
   "model": "gpt-4-turbo",
   "temperature": 1.0,
-  "enable_reasoning": true,
+  "enable_reasoning": false,
   "max_personas": null,
   "output_file": "test_results.json"
 }

@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
 Run the full discharge summary comprehension experiment from config file.
+Supports multiple models (OpenAI + Anthropic) with per-model iteration counts.
 """
 
 import json
+import os
 import sys
+import itertools
 from persona_discharge_query import PersonaDischargeQueryEngine
 
 
@@ -22,9 +25,7 @@ def load_config(config_file: str = "experiment_config.json") -> dict:
 
 
 def calculate_total_queries(config: dict) -> int:
-    """Calculate total number of queries that will be made."""
-    import itertools
-
+    """Calculate total number of queries per single iteration."""
     persona_keys = ['age', 'gender', 'education', 'ethnicity', 'doctor_visit', 'er_visit_frequency']
     persona_values = [config['persona_variations'][k] for k in persona_keys]
     num_personas = len(list(itertools.product(*persona_values)))
@@ -38,53 +39,49 @@ def calculate_total_queries(config: dict) -> int:
     return num_personas * num_ds * num_questions
 
 
-def estimate_cost(total_queries: int, model: str) -> dict:
-    """Estimate approximate cost based on model and query count."""
-    # Rough estimates (actual cost depends on prompt length)
-    avg_tokens_per_query = 600  # ~400 prompt + ~200 response
+def print_experiment_plan(config: dict, queries_per_iter: int) -> int:
+    """Print experiment plan and return total query count across all models/iterations."""
+    models = config.get('models', [])
+    # Backward compatibility: single model field
+    if not models and config.get('model'):
+        models = [{"model": config['model'], "provider": "openai", "iterations": 1}]
 
-    costs_per_1k = {
-        'gpt-4': 0.03,  # Input pricing (output is higher but we'll use average)
-        'gpt-4-turbo': 0.01,
-        'gpt-3.5-turbo': 0.001
-    }
+    total_all = 0
+    print("\n" + "=" * 80)
+    print("EXPERIMENT PLAN")
+    print("=" * 80)
+    print(f"Queries per iteration: {queries_per_iter:,}")
+    print(f"Temperature: {config.get('temperature', 1.0)}")
+    print(f"Reasoning: {'enabled' if config.get('enable_reasoning', False) else 'disabled'}")
+    print("-" * 80)
+    print(f"{'Model':<35} {'Provider':<12} {'Iters':<8} {'Total Queries'}")
+    print("-" * 80)
 
-    cost_per_1k = costs_per_1k.get(model, 0.03)
-    total_tokens = total_queries * avg_tokens_per_query
-    estimated_cost = (total_tokens / 1000) * cost_per_1k
+    for m in models:
+        iters = m.get('iterations', 1)
+        total = queries_per_iter * iters
+        total_all += total
+        print(f"{m['model']:<35} {m.get('provider', 'openai'):<12} {iters:<8} {total:,}")
 
-    return {
-        'total_queries': total_queries,
-        'estimated_tokens': total_tokens,
-        'estimated_cost_usd': round(estimated_cost, 2),
-        'model': model
-    }
+    print("-" * 80)
+    print(f"{'GRAND TOTAL':<56} {total_all:,}")
+    print("=" * 80)
+
+    return total_all
 
 
 def main():
     """Run the experiment from config file."""
-
-    # Load config
     config_file = sys.argv[1] if len(sys.argv) > 1 else "experiment_config.json"
     print(f"Loading configuration from: {config_file}")
     config = load_config(config_file)
 
-    # Calculate and display cost estimate
-    total_queries = calculate_total_queries(config)
-    cost_info = estimate_cost(total_queries, config['model'])
+    queries_per_iter = calculate_total_queries(config)
+    total_queries = print_experiment_plan(config, queries_per_iter)
 
-    print("\n" + "="*80)
-    print("COST ESTIMATE")
-    print("="*80)
-    print(f"Total queries: {cost_info['total_queries']:,}")
-    print(f"Estimated tokens: {cost_info['estimated_tokens']:,}")
-    print(f"Estimated cost: ${cost_info['estimated_cost_usd']:.2f} USD")
-    print(f"Model: {cost_info['model']}")
-    print("="*80)
-
-    # Ask for confirmation if cost is high
-    if cost_info['estimated_cost_usd'] > 10:
-        response = input(f"\nEstimated cost is ${cost_info['estimated_cost_usd']:.2f}. Continue? (yes/no): ")
+    # Ask for confirmation
+    if total_queries > 100:
+        response = input(f"\nTotal {total_queries:,} queries will be made. Continue? (yes/no): ")
         if response.lower() not in ['yes', 'y']:
             print("Experiment cancelled.")
             return
@@ -94,27 +91,50 @@ def main():
         engine = PersonaDischargeQueryEngine()
     except ValueError as e:
         print(f"\nError: {e}")
-        print("\nSet your OpenAI API key:")
-        print("  export OPENAI_API_KEY='your-api-key-here'")
+        print("\nSet your API keys:")
+        print("  export OPENAI_API_KEY='your-key'")
+        print("  export ANTHROPIC_API_KEY='your-key'")
         return
 
-    # Run experiment
-    print("\nStarting experiment...")
-    results = engine.run_full_experiment(
-        persona_variations=config['persona_variations'],
-        discharge_summary_ids=config['discharge_summary_ids'],
-        question_ids=config['question_ids'],
-        model=config['model'],
-        temperature=config['temperature'],
-        max_personas=config.get('max_personas'),
-        enable_reasoning=config.get('enable_reasoning', False)
-    )
+    # Parse models list (backward compatible)
+    models = config.get('models', [])
+    if not models and config.get('model'):
+        models = [{"model": config['model'], "provider": "openai", "iterations": 1}]
 
-    # Save results
-    output_file = config.get('output_file', 'results.json')
-    engine.save_results(results, output_file)
+    # Create output directory
+    output_dir = config.get('output_dir', 'results')
+    os.makedirs(output_dir, exist_ok=True)
 
-    print(f"\nExperiment complete! Results saved to {output_file}")
+    # Run experiment for each model and iteration
+    for model_cfg in models:
+        model_name = model_cfg['model']
+        provider = model_cfg.get('provider', 'openai')
+        iterations = model_cfg.get('iterations', 1)
+
+        for iteration in range(1, iterations + 1):
+            print(f"\n{'=' * 80}")
+            print(f"MODEL: {model_name} | PROVIDER: {provider} | ITERATION: {iteration}/{iterations}")
+            print(f"{'=' * 80}")
+
+            results = engine.run_full_experiment(
+                persona_variations=config['persona_variations'],
+                discharge_summary_ids=config['discharge_summary_ids'],
+                question_ids=config['question_ids'],
+                model=model_name,
+                temperature=config.get('temperature', 1.0),
+                max_personas=config.get('max_personas'),
+                enable_reasoning=config.get('enable_reasoning', False),
+                provider=provider
+            )
+
+            # Save results per model per iteration
+            safe_model_name = model_name.replace("/", "_")
+            output_file = os.path.join(output_dir, f"{safe_model_name}_iter{iteration}.json")
+            engine.save_results(results, output_file)
+
+            print(f"Saved: {output_file}")
+
+    print(f"\nAll experiments complete! Results saved to {output_dir}/")
 
 
 if __name__ == "__main__":
