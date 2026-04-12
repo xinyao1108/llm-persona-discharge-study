@@ -14,8 +14,8 @@
   "max_personas": null,
   "models": [
     {"model": "gpt-4.1", "provider": "openai", "iterations": 10},
-    {"model": "gpt-5.2", "provider": "openai", "iterations": 9},
-    {"model": "claude-sonnet-4-5-20241022", "provider": "anthropic", "iterations": 9}
+    {"model": "gpt-5.2", "provider": "openai", "iterations": 10},
+    {"model": "claude-sonnet-4-5-20241022", "provider": "anthropic", "iterations": 10}
   ],
   "output_dir": "results"
 }

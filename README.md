@@ -13,10 +13,10 @@ export OPENAI_API_KEY='your-openai-key'
 export ANTHROPIC_API_KEY='your-anthropic-key'
 
 # 3. Configure settings in experiment_config.json
-# Current experiment: 3 models, temperature=1.0, enable_reasoning=true
+# Current experiment: 3 models, temperature=1.0, enable_reasoning=false
 #   - GPT-4.1 (10 iterations)
-#   - GPT-5.2 (9 iterations)
-#   - Claude Sonnet 4.5 (9 iterations)
+#   - GPT-5.2 (10 iterations)
+#   - Claude Sonnet 4.5 (10 iterations)
 
 # 4. Run a small test
 python run_experiment.py test_config.json
@@ -63,19 +63,9 @@ Results are saved per model per iteration to the `output_dir`:
 
 ```
 results/
-├── gpt-4.1_iter1.json
-├── gpt-4.1_iter2.json
-├── gpt-4.1_iter3.json
-├── gpt-4.1_iter4.json
-├── gpt-4.1_iter5.json
-├── gpt-5.2_iter1.json
-├── gpt-5.2_iter2.json
-├── gpt-5.2_iter3.json
-├── gpt-5.2_iter4.json
-├── claude-sonnet-4-5-20241022_iter1.json
-├── claude-sonnet-4-5-20241022_iter2.json
-├── claude-sonnet-4-5-20241022_iter3.json
-└── claude-sonnet-4-5-20241022_iter4.json
+├── gpt-4.1_iter1.json ... gpt-4.1_iter10.json
+├── gpt-5.2_iter1.json ... gpt-5.2_iter10.json
+└── claude-sonnet-4-5-20241022_iter1.json ... claude-sonnet-4-5-20241022_iter10.json
 ```
 
 You only need the API key(s) for the providers you want to run. The engine skips models whose provider key is missing.
@@ -84,14 +74,14 @@ You only need the API key(s) for the providers you want to run. The engine skips
 
 - **192 persona combinations** (3 age × 2 gender × 2 education × 4 ethnicity × 2 doctor_visit × 2 er_visit)
 - **7,680 queries per iteration** (192 personas × 4 DS × 10 Q)
-- **215,040 total queries** across all models and iterations
+- **230,400 total queries** across all models and iterations
 
 | Model | Provider | Iterations | Queries |
 |-------|----------|-----------|---------|
 | gpt-4.1 | OpenAI | 10 | 76,800 |
-| gpt-5.2 | OpenAI | 9 | 69,120 |
-| claude-sonnet-4-5 | Anthropic | 9 | 69,120 |
-| **Total** | | **28** | **215,040** |
+| gpt-5.2 | OpenAI | 10 | 76,800 |
+| claude-sonnet-4-5 | Anthropic | 10 | 76,800 |
+| **Total** | | **30** | **230,400** |
 
 ## Files
 
@@ -103,7 +93,7 @@ You only need the API key(s) for the providers you want to run. The engine skips
 
 ## Cost Management
 
-⚠️ The full experiment (~215,040 queries) can be expensive! To reduce cost:
+⚠️ The full experiment (~230,400 queries) can be expensive! To reduce cost:
 
 1. **Use test config first**: `python run_experiment.py test_config.json`
 2. **Reduce iterations**: Lower iteration count per model
